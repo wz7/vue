@@ -239,23 +239,23 @@ strats.watch = function (
  * Other object hashes.
  */
 strats.props =
-strats.methods =
-strats.inject =
-strats.computed = function (
-  parentVal: ?Object,
-  childVal: ?Object,
-  vm?: Component,
-  key: string
-): ?Object {
-  if (childVal && process.env.NODE_ENV !== 'production') {
-    assertObjectType(key, childVal, vm)
+  strats.methods =
+  strats.inject =
+  strats.computed = function (
+    parentVal: ?Object,
+    childVal: ?Object,
+    vm?: Component,
+    key: string
+  ): ?Object {
+    if (childVal && process.env.NODE_ENV !== 'production') {
+      assertObjectType(key, childVal, vm)
+    }
+    if (!parentVal) return childVal
+    const ret = Object.create(null)
+    extend(ret, parentVal)
+    if (childVal) extend(ret, childVal)
+    return ret
   }
-  if (!parentVal) return childVal
-  const ret = Object.create(null)
-  extend(ret, parentVal)
-  if (childVal) extend(ret, childVal)
-  return ret
-}
 strats.provide = mergeDataOrFn
 
 /**
@@ -397,7 +397,7 @@ export function mergeOptions (
   if (typeof child === 'function') {
     child = child.options
   }
-
+  // 选项的标准化处理-----------------------------------------------------------------------------
   normalizeProps(child, vm)
   normalizeInject(child, vm)
   normalizeDirectives(child)
@@ -406,6 +406,7 @@ export function mergeOptions (
   // but only if it is a raw options object that isn't
   // the result of another mergeOptions call.
   // Only merged options has the _base property.
+  // 递归合并选项--------------------------------------------------------------------------------
   if (!child._base) {
     if (child.extends) {
       parent = mergeOptions(parent, child.extends, vm)
@@ -417,11 +418,13 @@ export function mergeOptions (
     }
   }
 
+  // 最后return 的结果--------------------------------------------------------------------------
   const options = {}
   let key
   for (key in parent) {
     mergeField(key)
   }
+  // child选项和parent选项出现冲突，会覆盖parent--------------------------------------------------
   for (key in child) {
     if (!hasOwn(parent, key)) {
       mergeField(key)

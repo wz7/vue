@@ -43,7 +43,7 @@ export default class Watcher {
   getter: Function;
   value: any;
 
-  constructor (
+  constructor(
     vm: Component,
     expOrFn: string | Function,
     cb: Function,
@@ -80,6 +80,7 @@ export default class Watcher {
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
+      // 传递 key 进来，this.key --------------------------------------------------------
       this.getter = parsePath(expOrFn)
       if (!this.getter) {
         this.getter = noop
@@ -98,12 +99,19 @@ export default class Watcher {
 
   /**
    * Evaluate the getter, and re-collect dependencies.
+   * 触发 updateComponent 的执行，进行组件更新，进入 patch 阶段 ----------------------------
+   * 更新组件时先执行 render 生成 VNode，期间触发读取操作，进行依赖收集 ----------------------- 
    */
   get () {
+    // 对新值进行依赖收集 ----------------------------------------------------------------
     pushTarget(this)
     let value
     const vm = this.vm
     try {
+      // 执行实例化 watcher 时传递进来的第二个参数 ------------------------------------------
+      // 可能是一个函数，比如 实例化渲染 watcher 时传递的 updateComponent 函数 ---------------
+      // 用户 watcher，可能传递时一个key，也可能是读取 this.key 的函数 -----------------------
+      // 触发读取操作，被 setter 拦截，进行依赖收集 -----------------------------------------
       value = this.getter.call(vm, vm)
     } catch (e) {
       if (this.user) {
@@ -125,6 +133,7 @@ export default class Watcher {
 
   /**
    * Add a dependency to this directive.
+   * 将 dep 放到 watcher 中 --------------------------------------------------------------
    */
   addDep (dep: Dep) {
     const id = dep.id
@@ -132,6 +141,7 @@ export default class Watcher {
       this.newDepIds.add(id)
       this.newDeps.push(dep)
       if (!this.depIds.has(id)) {
+        // 将 watcher 自己到 dep 中，来了一个双向收集 ----------------------------------------
         dep.addSub(this)
       }
     }
@@ -165,10 +175,16 @@ export default class Watcher {
   update () {
     /* istanbul ignore else */
     if (this.lazy) {
+      // 懒执行会走这，比如 computed -------------------------------------------------------
+      // 将 dirty 赋值为 true，在组件更新之后，当响应式数据再次呗更新时，执行 computed getter
+      // 重新执行 computed 回调函数，计算新值后，然后缓存到 watcher.value
       this.dirty = true
     } else if (this.sync) {
+      // 同步执行时走这 -------------------------------------------------------------------
+      // 比如 this.$watch() 或者 watch 选项时，传递一个 sync 配置，比如 { sync：true } --------
       this.run()
     } else {
+      // 将当前 watcher 放入 watcher 队列，一般走这个分支 ------------------------------------
       queueWatcher(this)
     }
   }
@@ -179,6 +195,7 @@ export default class Watcher {
    */
   run () {
     if (this.active) {
+      // 执行 get ----------------------------------------------------------------------
       const value = this.get()
       if (
         value !== this.value ||
@@ -192,6 +209,8 @@ export default class Watcher {
         const oldValue = this.value
         this.value = value
         if (this.user) {
+          // 用户 watcher，再执行一下 watch 回调 -------------------------------------------
+          // watch(() => {}, {val, oldVal} => {})
           const info = `callback for watcher "${this.expression}"`
           invokeWithErrorHandling(this.cb, this.vm, [value, oldValue], this.vm, info)
         } else {

@@ -21,7 +21,7 @@ import {
 export let activeInstance: any = null
 export let isUpdatingChildComponent: boolean = false
 
-export function setActiveInstance(vm: Component) {
+export function setActiveInstance (vm: Component) {
   const prevActiveInstance = activeInstance
   activeInstance = vm
   return () => {
@@ -186,7 +186,9 @@ export function mountComponent (
       measure(`vue ${name} patch`, startTag, endTag)
     }
   } else {
+    // 负责更新组件 --------------------------------------------------------------------
     updateComponent = () => {
+      // 执行 _update 进行更新阶段，首先执行 _render，将组件变成vnode ------------------------
       vm._update(vm._render(), hydrating)
     }
   }
